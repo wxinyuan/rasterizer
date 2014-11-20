@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "rasterizer.h"
+#include "softrender.h"
 
 #define MAX_LOADSTRING	100
 #define WIDTH			800
@@ -20,6 +21,8 @@ LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
 DWORD inBuffer[WIDTH * HEIGHT];
+
+SoftRender g_softRender(WIDTH, HEIGHT);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -166,11 +169,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc=BeginPaint(hWnd,&ps);
-        for(int i = 0; i < WIDTH * HEIGHT; i++) 
-        {
-            inBuffer[i] = 0xffffff00;
-        }
-        hBitmap =CreateBitmap(WIDTH, HEIGHT, 1, 32, inBuffer);
+        //for(int i = 0; i < WIDTH * HEIGHT; i++) 
+        //{
+        //    inBuffer[i] = 0xffffff00;
+        //}
+		g_softRender.clear(0x00000000);
+		g_softRender.drawLine(0, 0, 100, 100, 0xffffff00);
+        hBitmap =CreateBitmap(WIDTH, HEIGHT, 1, 32, g_softRender.getBackBuffer());
         hBitmapDC = CreateCompatibleDC(hdc); 
         SelectObject(hBitmapDC,hBitmap);
 
