@@ -171,6 +171,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\frameBuffer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\frameBuffer.h"
+				>
+			</File>
+			<File
 				RelativePath=".\rasterizer.cpp"
 				>
 			</File>
@@ -227,6 +235,26 @@
 				</File>
 				<File
 					RelativePath=".\math\vec.h"
+					>
+				</File>
+				<File
+					RelativePath=".\math\xnamath.h"
+					>
+				</File>
+				<File
+					RelativePath=".\math\xnamathconvert.inl"
+					>
+				</File>
+				<File
+					RelativePath=".\math\xnamathmatrix.inl"
+					>
+				</File>
+				<File
+					RelativePath=".\math\xnamathmisc.inl"
+					>
+				</File>
+				<File
+					RelativePath=".\math\xnamathvector.inl"
 					>
 				</File>
 			</Filter>

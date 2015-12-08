@@ -1,29 +1,34 @@
 #include "stdafx.h"
 #include "softrender.h"
 
-SoftRender::SoftRender(int w, int h)
+SoftRender::SoftRender()
 {
-	reset(w, h);
+	
 }
 
 SoftRender::~SoftRender()
 {
-	SAFE_DELETE(m_pBackBuffer);
+	
 }
 
-void SoftRender::reset(int w, int h)
+void SoftRender::resize(int w, int h)
 {
-	SAFE_DELETE(m_pBackBuffer);
-	m_pBackBuffer = new DWORD[w * h];
-	m_width = w;
-	m_hight = h;
+	m_backBuffer.resize(w, h);
 }
+
+//void SoftRender::reset(int w, int h)
+//{
+//	SAFE_DELETE(m_pBackBuffer);
+//	m_pBackBuffer = new DWORD[w * h];
+//	m_width = w;
+//	m_hight = h;
+//}
 
 void SoftRender::clear(DWORD color)
 {
-	for (int i = 0; i < m_width * m_hight; ++i)
+	for (int i = 0; i < m_backBuffer.m_iWidth * m_backBuffer.m_iHight; ++i)
 	{
-		m_pBackBuffer[i] = color;
+		m_backBuffer.m_dwColorBuffer[i] = color;
 	}
 }
 

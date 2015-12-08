@@ -10,19 +10,30 @@
 #define HEIGHT			600
 
 // Global Variables:
-HINSTANCE hInst;								// current instance
-TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
-TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
+
+HINSTANCE	hInst;								// current instance
+TCHAR		szTitle[MAX_LOADSTRING];					// The title bar text
+TCHAR		szWindowClass[MAX_LOADSTRING];			// the main window class name
+bool		g_bExit = false;
+HWND		g_hWnd;
+HGDIOBJ		g_screenDIB;
+HBITMAP		g_dibBefore; 
+HDC			g_dbiDc;
+char*		g_screenBits;
+
+SoftRender g_softRender;
 
 // Forward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+void				Update();
+void				Draw();
+void				initDIB(HDC dibDC, int width, int height);
+void				releaseDIB(HDC dibDC);
 
-DWORD inBuffer[WIDTH * HEIGHT];
 
-SoftRender g_softRender(WIDTH, HEIGHT);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -50,33 +61,42 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RASTERIZER));
 
 	// Main message loop:
-	while (GetMessage(&msg, NULL, 0, 0))
+	while (!g_bExit)
 	{
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT)
+			{
+				g_bExit = true;
+			}
+			else					
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 		}
+		Update();		
+		Draw();
 	}
 
 	return (int) msg.wParam;
 }
 
+void Update()
+{
 
+}
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-//  COMMENTS:
-//
-//    This function and its usage are only necessary if you want this code
-//    to be compatible with Win32 systems prior to the 'RegisterClassEx'
-//    function that was added to Windows 95. It is important to call this function
-//    so that the application will get 'well formed' small icons associated
-//    with it.
-//
+void Draw()
+{
+	g_softRender.clear(0x00000000);
+	g_softRender.drawLine(0, 0, 100, 100, 0x00ffffff);
+
+	const FrameBuffer& fb = g_softRender.getBackBuffer();
+	memcpy(g_screenBits, fb.m_dwColorBuffer, fb.m_iWidth * fb.m_iHight * sizeof(DWORD));
+	BitBlt(GetDC(g_hWnd), 0, 0, fb.m_iWidth, fb.m_iHight, g_dbiDc, 0, 0, SRCCOPY);
+}
+
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
 	WNDCLASSEX wcex;
@@ -98,16 +118,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassEx(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    HWND hWnd;
@@ -128,26 +138,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
+   g_hWnd = hWnd;
+
    return TRUE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE:  Processes messages for the main window.
-//
-//  WM_COMMAND	- process the application menu
-//  WM_PAINT	- Paint the main window
-//  WM_DESTROY	- post a quit message and return
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
-	PAINTSTRUCT ps;
-	HDC hdc;
-	HGDIOBJ hBitmap;
-	HDC hBitmapDC; 
 
 	switch (message)
 	{
@@ -167,23 +165,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
 		break;
-	case WM_PAINT:
-		hdc=BeginPaint(hWnd,&ps);
-        //for(int i = 0; i < WIDTH * HEIGHT; i++) 
-        //{
-        //    inBuffer[i] = 0xffffff00;
-        //}
-		g_softRender.clear(0x00000000);
-		g_softRender.drawLine(0, 0, 100, 100, 0xffffff00);
-        hBitmap =CreateBitmap(WIDTH, HEIGHT, 1, 32, g_softRender.getBackBuffer());
-        hBitmapDC = CreateCompatibleDC(hdc); 
-        SelectObject(hBitmapDC,hBitmap);
-
-        BitBlt(hdc,0,0,WIDTH,HEIGHT,hBitmapDC,0,0,SRCCOPY); 
-        EndPaint (hWnd, &ps) ;
-
+	case WM_SIZE:
+		{
+			int iWidth = LOWORD(lParam);
+			int iHeight = HIWORD(lParam);
+			g_softRender.resize(iWidth, iHeight);
+			g_dbiDc = CreateCompatibleDC(GetDC(hWnd));
+			releaseDIB(g_dbiDc);
+			initDIB(g_dbiDc, iWidth, iHeight);
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
 		break;
 	case WM_DESTROY:
+		DeleteObject(g_dbiDc);
 		PostQuitMessage(0);
 		break;
 	default:
@@ -192,7 +186,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-// Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -211,3 +204,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return (INT_PTR)FALSE;
 }
+
+void initDIB(HDC dibDC, int width, int height)
+{  
+	BITMAPINFO bmi;  
+	memset(&bmi, 0, sizeof(bmi));  
+	bmi.bmiHeader.biSize		= sizeof(BITMAPINFOHEADER);  
+	bmi.bmiHeader.biWidth		= width;  
+	bmi.bmiHeader.biHeight		= -height;  
+	bmi.bmiHeader.biPlanes		= 1;
+	bmi.bmiHeader.biBitCount	= 32;  
+	bmi.bmiHeader.biCompression	= BI_RGB;  
+	g_screenDIB = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, (void**)&g_screenBits, NULL, 0);  
+	g_dibBefore = (HBITMAP)SelectObject(dibDC, g_screenDIB);  
+}  
+
+void releaseDIB(HDC dibDC)
+{  
+	if(g_screenDIB!=NULL)
+	{
+		SelectObject(dibDC, g_dibBefore);
+		DeleteObject(g_screenDIB);  
+		g_screenDIB=NULL; 
+	}  
+}  
